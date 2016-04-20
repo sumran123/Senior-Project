@@ -554,6 +554,7 @@ public class Slice{
 		// Step 2;
 		// int ;
 		if(mb_type.equals("P_8x8")||mb_type.equals("P_8x8ref0")||mb_type.equals("B_8x8")){
+			System.out.println("6.4.2.2 to be implemented and invoked");
 			// 6.4.2.2 to be invoked
 		}else{
 			xS=0;
@@ -563,6 +564,7 @@ public class Slice{
 		if(mb_type.equals("P_Skip")||mb_type.equals("B_Skip")||mb_type.equals("B_Direct_16x16")){
 			predPartWidth=16;
 		}else if (mb_type.equals("B_8x8")){
+			System.out.println(" error arose in 6.4.11.7");
 			// not applicable in BaseLine
 
 		}else if(mb_type.equals("P_8x8")||mb_type.equals("P_8x8ref0")){
@@ -570,7 +572,7 @@ public class Slice{
 		}else{
 			predPartWidth=MbPartWidth(mb_type);
 		}
-		// step 4
+		// step 4 & 5
 		int xD,yD;
 		// if(N.equals("A")){
 		// table 6.2
@@ -594,7 +596,7 @@ public class Slice{
 		xD=x+xS-1;
 		yD=y+yS-1;
 		// }
-		// step 5
+
 		
 		
 		// step 6
@@ -697,13 +699,18 @@ public class Slice{
 			System.out.println(mb_type+" Inter_prediction_process");
 			// return;
 		}
+
+		// Standard starts here dealing with P_Skip onle
 		for(mbPartIdx=0;mbPartIdx<NumMbPart(mb_type);mbPartIdx++){
 			System.out.println("called once");
 			if(!mb_type.equals("P_8x8")||!mb_type.equals("P_8x8ref0")||
 				!mb_type.equals("B_Skip")||!mb_type.equals("B_Direct_16x16")||
 				!mb_type.equals("B_8x8")){
+				subMbPartIdx = 0;
 				partWidth=MbPartWidth(mb_type);
 				partHeight=MbPartHeight(mb_type);
+			} else {
+				System.out.println("do implementation in 8.4");
 			}
 			partWidthC=partWidth/getSubWidthC();
 			partHeightC=partHeight/getSubHeightC();
@@ -730,12 +737,14 @@ public class Slice{
 			// call 8.4.2
 			Decoding_process_for_Inter_prediction_samples();
 			
-			// MvL0[mbPartIdx][subMbPartIdx]=mvL0;
-			// MvL1[mbPartIdx][subMbPartIdx]=mvL1;
-			// RefIdxL0[mbPartIdx]=refIdxL0;
-			// RefIdxL1[mbPartIdx]=refIdxL1;
-			// PredFlagL0[mbPartIdx]=predFlagL0;
-			// PredFlagL1[mbPartIdx]=predFlagL1;
+			mbData.MvL0[mbPartIdx][subMbPartIdx]=mvL0;
+			mbData.MvL1[mbPartIdx][subMbPartIdx]=mvL1;
+			mbData.RefIdxL0[mbPartIdx]=refIdxL0;
+			mbData.RefIdxL1[mbPartIdx]=refIdxL1;
+			mbData.PredFlagL0[mbPartIdx]=predFlagL0;
+			mbData.PredFlagL1[mbPartIdx]=predFlagL1;
+
+			MacroBlockData[CurrMbAddr] = mbData;
 
 			// call 6.4.2.1
 			Inverse_macroblock_partition_scanning_process();
@@ -749,12 +758,10 @@ public class Slice{
 			yS=y;
 			for(x=0;x<partWidth-1;x++){
 				for(y=0;y<partHeight-1;y++){
-					// predL[xP+xS+x][yP+yS+y]=predPartL[x][y];
+					predL[xP+xS+x][yP+yS+y]=predPartL[x][y];
 				}
 			}
 		}
-
-
 	}
 	// 6.4.2.2
 	
@@ -785,9 +792,42 @@ public class Slice{
 
 		}
 		// call 8.4.2.3
+		Weighted_sample_prediction_process();
+	}
+	// 8.4.2.3
+	public void Weighted_sample_prediction_process() {
+		if(predFlagL0 && (slice_type % 5 == 3 || slice_type % 5 == 0 )) {
+			// for p and SP slice 
+			if(weighted_pred_flag == false) {
+				Default_weighted_sample_prediction_process();
+				System.out.println("call 8.4.2.3.1");
+			}else if(weighted_pred_flag) {
+				System.out.println("call 8.4.2.3.2");
 
-
-
+			}
+		} 
+	}
+	// 8.4.2.3.1
+	public void Default_weighted_sample_prediction_process() {
+		if(predFlagL0 && predFlagL1 == false) {
+			for(int x = 0; x < partWidth; x++) {
+				for(int y = 0; y < partHeight; y++) {
+					predPartL[x][y] = predPartL0L[x][y];
+				}
+			}
+		} else if(predFlagL0 == false && predFlagL1) {
+			for(int x = 0; x < partWidth; x++) {
+				for(int y = 0; y < partHeight; y++) {
+					predPartL[x][y] = predPartL1L[x][y];
+				}
+			}
+		} else if(predFlagL0 && predFlagL1) {
+			for(int x = 0; x < partWidth; x++) {
+				for(int y = 0; y < partHeight; y++) {
+					predPartL[x][y] = (predPartL1L[x][y] + predPartL0L[x][y] + 1) >>  2  ;
+				}
+			}
+		}
 	}
 	// 8.4.2.1
 	public void Reference_picture_selection_process(int X){
@@ -1023,8 +1063,6 @@ public class Slice{
 			return r;
 		}
 		return -1;
-
-
 	}
 
 	// 8.4.3
@@ -1069,8 +1107,6 @@ public class Slice{
 			// 8.4.1.1
 			Derivation_process_for_luma_motion_vectors_for_skipped_macroblocks_in_P_and_SP_slices();
 			subMvCnt = 1;
-
-
 		}
 		else if(mb_type.equals("B_Skip")||mb_type.equals("B_Direct_16x16")||sub_mb_type[mbPartIdx].equals("B_Direct_8x8")){
 			System.out.println("B slice implementation required ");
@@ -1108,10 +1144,9 @@ public class Slice{
 			subMbPartIdx=0;
 			currSubMbType ="na";
 			// call 8.4.1.3
-			System.out.println("call 8.4.1.3");
+			System.out.println("implementation of 8.4.1.3  required");
 			// Derivation_process_for_luma_motion_vector_prediction();
 		}
-		
 	}
 	// 8.4.1.3
 	public void Derivation_process_for_luma_motion_vector_prediction(){
@@ -1120,6 +1155,7 @@ public class Slice{
 	// 8.4.1.3.2
 	public void Derivation_process_for_motion_data_of_neighbouring_partitions(){
 		// step 1
+		System.out.println("may be problem is in 8.4.1.3.2");
 		// mbAddrD\mbPartIdxD\subMbPartIdxD be variables specifying an additional neighbouring partition.
 		// step 2
 		// call 6.4.11.7
@@ -1148,8 +1184,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL0A=MvL0[mbPartIdxA][subMbPartIdxA];
-				refIdxL0A=RefIdxL0[mbPartIdxA];
+				mvL0A=MacroBlockData[mbAddrA].MvL0[mbPartIdxA][subMbPartIdxA];
+				refIdxL0A=MacroBlockData[mbAddrA].RefIdxL0[mbPartIdxA];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1175,8 +1211,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL0B=MvL0[mbPartIdxB][subMbPartIdxB];
-				refIdxL0B=RefIdxL0[mbPartIdxB];
+				mvL0B=MacroBlockData[mbAddrB].MvL0[mbPartIdxB][subMbPartIdxB];
+				refIdxL0B=MacroBlockData[mbAddrB].RefIdxL0[mbPartIdxB];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1202,8 +1238,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL0C=MvL0[mbPartIdxC][subMbPartIdxC];
-				refIdxL0C=RefIdxL0[mbPartIdxC];
+				mvL0C=MacroBlockData[mbAddrC].MvL0[mbPartIdxC][subMbPartIdxC];
+				refIdxL0C=MacroBlockData[mbAddrC].RefIdxL0[mbPartIdxC];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1230,8 +1266,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL0D=MvL0[mbPartIdxD][subMbPartIdxD];
-				refIdxL0D=RefIdxL0[mbPartIdxD];
+				mvL0D=MacroBlockData[mbAddrD].MvL0[mbPartIdxD][subMbPartIdxD];
+				refIdxL0D=MacroBlockData[mbAddrD].RefIdxL0[mbPartIdxD];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1257,8 +1293,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL1A=MvL0[mbPartIdxA][subMbPartIdxA];
-				refIdxL1A=RefIdxL0[mbPartIdxA];
+				mvL1A=MacroBlockData[mbAddrA].MvL1[mbPartIdxA][subMbPartIdxA];
+				refIdxL1A=MacroBlockData[mbAddrA].RefIdxL1[mbPartIdxA];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1284,8 +1320,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL1B=MvL0[mbPartIdxB][subMbPartIdxB];
-				refIdxL1B=RefIdxL0[mbPartIdxB];
+				mvL1B=MacroBlockData[mbAddrB].MvL1[mbPartIdxB][subMbPartIdxB];
+				refIdxL1B=MacroBlockData[mbAddrB].RefIdxL1[mbPartIdxB];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1311,8 +1347,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL1C=MvL0[mbPartIdxC][subMbPartIdxC];
-				refIdxL1C=RefIdxL0[mbPartIdxC];
+				mvL1C=MacroBlockData[mbAddrC].MvL1[mbPartIdxC][subMbPartIdxC];
+				refIdxL1C=MacroBlockData[mbAddrC].RefIdxL1[mbPartIdxC];
 
 				// step 2
 				// if curr is field and a is frame
@@ -1339,8 +1375,8 @@ public class Slice{
 				// otherwise follow these steps
 			} else{
 				// step 1
-				mvL1D=MvL0[mbPartIdxD][subMbPartIdxD];
-				refIdxL1D=RefIdxL0[mbPartIdxD];
+				mvL1D=MacroBlockData[mbAddrD].MvL1[mbPartIdxD][subMbPartIdxD];
+				refIdxL1D=MacroBlockData[mbAddrD].RefIdxL1[mbPartIdxD];
 
 				// step 2
 				// if curr is field and a is frame
