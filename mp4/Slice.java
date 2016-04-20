@@ -176,9 +176,9 @@ public class Slice{
 	String mbTypeN;
 	String[] sub_mb_type=new String[4];
 	String[] subMbTypeN = new String[4];
-	int [][][] MvL0,MvL1;
-	int [] RefIdxL0,RefIdxL1;
-	boolean [] PredFlagL1,PredFlagL0;
+	// int [][][] MvL0,MvL1;
+	// int [] RefIdxL0,RefIdxL1;
+	// boolean [] PredFlagL1,PredFlagL0;
 	int LogWDL,W0L,W1L,O0L,O1L;
 	int [][] predPartL1L,predPartL0L;
 	int [][] refPicLXL;
@@ -409,6 +409,8 @@ public class Slice{
 						mb_type="P_Skip";
 						Inter_prediction_process();
 						MacroBlockData[CurrMbAddr]=mbData;
+						x=scan.nextInt();
+
 						// System.out.println("CurrMbAddr "+CurrMbAddr);
 
 						CurrMbAddr = NextMbAddress(CurrMbAddr);
@@ -444,7 +446,7 @@ public class Slice{
 				System.out.println("Size "+ size); 
 
 				System.out.println("*************************"+p.pointer+"*************************");
-				x=scan.nextInt();
+				// x=scan.nextInt();
 
 	
 			}
@@ -736,7 +738,8 @@ public class Slice{
 			// step 4
 			// call 8.4.2
 			Decoding_process_for_Inter_prediction_samples();
-			
+			// mvL0=new int[2];
+			// mvL1=new int[2];
 			mbData.MvL0[mbPartIdx][subMbPartIdx]=mvL0;
 			mbData.MvL1[mbPartIdx][subMbPartIdx]=mvL1;
 			mbData.RefIdxL0[mbPartIdx]=refIdxL0;
@@ -781,7 +784,7 @@ public class Slice{
 	// 8.4.2
 	public void Decoding_process_for_Inter_prediction_samples(){
 		// System.out.println("");
-		System.out.println("8.4.2 implementation required");
+		// System.out.println("8.4.2 implementation required");
 		predPartL1L=new int[partWidth][partHeight];
 		predPartL0L=new int[partWidth][partHeight];
 		if(predFlagL0==true){
@@ -798,10 +801,10 @@ public class Slice{
 	public void Weighted_sample_prediction_process() {
 		if(predFlagL0 && (slice_type % 5 == 3 || slice_type % 5 == 0 )) {
 			// for p and SP slice 
-			if(weighted_pred_flag == false) {
+			if(pps0.weighted_pred_flag == false) {
 				Default_weighted_sample_prediction_process();
 				System.out.println("call 8.4.2.3.1");
-			}else if(weighted_pred_flag) {
+			}else if(pps0.weighted_pred_flag) {
 				System.out.println("call 8.4.2.3.2");
 
 			}
@@ -809,9 +812,11 @@ public class Slice{
 	}
 	// 8.4.2.3.1
 	public void Default_weighted_sample_prediction_process() {
+		predPartL=new int[partWidth][partHeight];
 		if(predFlagL0 && predFlagL1 == false) {
 			for(int x = 0; x < partWidth; x++) {
 				for(int y = 0; y < partHeight; y++) {
+					// System.out.print("first value "+" "+predPartL0L[x][y]);
 					predPartL[x][y] = predPartL0L[x][y];
 				}
 			}
@@ -891,8 +896,9 @@ public class Slice{
 					yFracL = mvL0[1] & 3;
 
 					// step 2
-					System.out.println("call 8.4.2.2.1");
+					// System.out.println("call 8.4.2.2.1");
 					predPartL0L[xL][yL]=Luma_sample_interpolation_process(xIntL,yIntL, xFracL, yFracL,X);
+					System.out.print(" "+predPartL0L[xL][yL]+" ");
 
 					// step 3
 					// this is for chroma
@@ -2486,10 +2492,10 @@ public class Slice{
 		// 4
 		int [][]u=new int [16][16];
 		for(int x=0;x<16;x++){
-			System.out.println();
+			// System.out.println();
 			for(int y=0;y<16;y++){
 				u[x][y]=clip1y(predL[y][x]+rMB[y][x]);
-				System.out.print(" "+u[x][y]);
+				// System.out.print(" "+u[x][y]);
 			}
 		}
 		// 5

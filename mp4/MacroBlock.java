@@ -2,9 +2,12 @@ public class MacroBlock{
 	String mb_type_;
 	String mbPredMode;
 	
-	int [][][] MvL0,MvL1;
-	int [] RefIdxL0,RefIdxL1;
-	boolean [] PredFlagL1,PredFlagL0;
+	int [][][] MvL0=new int[4][16][2];
+	int[][][] MvL1=new int[4][16][2];
+	int [] RefIdxL0=new int[4];
+	int [] RefIdxL1=new int[4];
+	boolean [] PredFlagL1=new boolean[4];
+	boolean [] PredFlagL0=new boolean[4];
 	
 	int [] Intra4x4PredMode_Prev = new int[16];
 	String[] sub_mb_type_ = new String[4];
