@@ -171,6 +171,8 @@ public class Slice{
 	int[] mvL1B = new int[2];
 	int[] mvL1D = new int[2];
 	int[] mvL1C = new int[2];
+	int[] mvpL0 = new int[2];
+	int[] mvpL1 = new int[2];
 
 	int refIdxL1D,refIdxL1C,refIdxL1A,refIdxL1B,refIdxL0D,refIdxL0C,refIdxL0A,refIdxL0B,mbPartIdxC,mbPartIdxN,mbPartIdxD,mbPartIdxA,mbPartIdxB,subMbPartIdxC,subMbPartIdxN,subMbPartIdxD,subMbPartIdxA,subMbPartIdxB; 
 	String mbTypeN;
@@ -485,18 +487,36 @@ public class Slice{
 	public int MbPartWidth(String mb_type_0){
 		// for p_skip only 
 		int ret=16;
-		if(mb_type_0.equals("P_Skip")){
-			ret= 16;
-
+		if(mb_type_0.equals("P_L0_16x16")){
+			return 16;
+		}else if(mb_type_0.equals("P_L0_L0_16x8")){
+			return 16;
+		}else if(mb_type_0.equals("P_L0_L0_8x16")){
+			return 8;
+		}else if(mb_type_0.equals("P_8x8")){
+			return 8;
+		}else if(mb_type_0.equals("P_8x8ref0")){
+			return 8;
+		}else if(mb_type_0.equals("P_Skip")){
+			return 16;
 		}
 		return ret;
 	}
 	public int MbPartHeight(String mb_type_0){
 		// for p_skip only
-		int ret=16;
-		if(mb_type_0.equals("P_Skip")){
-			ret= 16;
-
+		int ret = 16;
+		if(mb_type_0.equals("P_L0_16x16")){
+			return 16;
+		}else if(mb_type_0.equals("P_L0_L0_16x8")){
+			return 8;
+		}else if(mb_type_0.equals("P_L0_L0_8x16")){
+			return 16;
+		}else if(mb_type_0.equals("P_8x8")){
+			return 8;
+		}else if(mb_type_0.equals("P_8x8ref0")){
+			return 8;
+		}else if(mb_type_0.equals("P_Skip")){
+			return 16;
 		}
 		return ret;
 	}
@@ -1118,10 +1138,49 @@ public class Slice{
 			System.out.println("B slice implementation required ");
 
 		}else{
-			System.out.println("complete the remaining steps to continue ");
+			// step 1 
+			if(MbPartPredMode(mbRow, mbPartIdx).equals("Pred_L0") || SubMbPredMode(sub_mb_type[mbPartIdx]).equals("Pred_L0")) {
+				refIdxL0 = ref_idx_l0[mbPartIdx];
+				predFlagL0 = true;
+
+			}else {
+				refIdxL0 = -1;
+				predFlagL0 = false;
+			}
+			if(MbPartPredMode(mbRow, mbPartIdx).equals("Pred_L1") || SubMbPredMode(sub_mb_type[mbPartIdx]).equals("Pred_L1")) {
+				refIdxL1 = ref_idx_l1[mbPartIdx];
+				predFlagL1 = true;
+
+			}else {
+				refIdxL1 = -1;
+				predFlagL1 = false;
+			}
+			// step 2			
+			// System.out.println("complete the remaining steps to continue ");
+			subMvCnt = (predFlagL0 ? 1:0) + (predFlagL1 ? 1:0);
+			// step 3
+			if(mb_type.equals("B_8x8")) {
+				currSubMbType = sub_mb_type[mbPartIdx];
+			} else {
+				currSubMbType = "na";
+			}
+			// step 4
+			if(predFlagL0) {
+				Derivation_process_for_luma_motion_vector_prediction(0);
+				mvL0[0] = mvpL0[0] + mvd_l0[mbPartIdx][subMbPartIdx][0];
+				mvL0[1] = mvpL0[1] + mvd_l0[mbPartIdx][subMbPartIdx][1];
+			}
+			if(predFlagL1) {
+				Derivation_process_for_luma_motion_vector_prediction(1);
+				mvL1[0] = mvpL1[0] + mvd_l1[mbPartIdx][subMbPartIdx][0];
+				mvL1[1] = mvpL1[1] + mvd_l1[mbPartIdx][subMbPartIdx][1];
+			}
 
 		}
 		// Only for P_Skip Macroblock
+	}
+	public String SubMbPredMode(String str) {
+		return "na";
 	}
 	// 8.4.1.1
 	public void Derivation_process_for_luma_motion_vectors_for_skipped_macroblocks_in_P_and_SP_slices(){
@@ -1155,8 +1214,47 @@ public class Slice{
 		}
 	}
 	// 8.4.1.3
-	public void Derivation_process_for_luma_motion_vector_prediction(){
+	public void Derivation_process_for_luma_motion_vector_prediction(int X){
+		if(X == 0 ) {
+			listSuffixFlag = false;
+		}else{
+			listSuffixFlag=true;
+		}
+		Derivation_process_for_motion_data_of_neighbouring_partitions();
+		if(!listSuffixFlag) {
+			if(MbPartWidth(mb_type) == 16 &&MbPartHeight(mb_type) == 8&& mbPartIdx== 0 && refIdxL0B == refIdxL0) {
+				mvpL0 = mvL0B;
+
+			} else if(MbPartWidth(mb_type) == 16 &&MbPartHeight(mb_type) == 8 && mbPartIdx== 1 && refIdxL0A == refIdxL0) {
+				mvpL0 = mvL0A;
+
+			} else 	if(MbPartWidth(mb_type) == 8 &&MbPartHeight(mb_type) == 16 && mbPartIdx== 0 && refIdxL0A == refIdxL0) {
+				mvpL0 = mvL0A;
+			} else 	if(MbPartWidth(mb_type) == 8 &&MbPartHeight(mb_type) == 16 && mbPartIdx== 1 && refIdxL0C == refIdxL0) {
+				mvpL0 = mvL0C;
+
+			} else {
+				Derivation_process_for_median_luma_motion_vector_prediction(X);
+			}
+		}else{
+			if(MbPartWidth(mb_type) == 16 &&MbPartHeight(mb_type) == 8&& mbPartIdx== 0 && refIdxL1B == refIdxL1) {
+				mvpL1 = mvL1B;
+
+			} else if(MbPartWidth(mb_type) == 16 &&MbPartHeight(mb_type) == 8 && mbPartIdx== 1 && refIdxL1A == refIdxL1) {
+				mvpL1 = mvL1A;
+
+			} else 	if(MbPartWidth(mb_type) == 8 &&MbPartHeight(mb_type) == 16 && mbPartIdx== 0 && refIdxL1A == refIdxL1) {
+				mvpL1 = mvL1A;
+			} else 	if(MbPartWidth(mb_type) == 8 &&MbPartHeight(mb_type) == 16 && mbPartIdx== 1 && refIdxL1C == refIdxL1) {
+				mvpL1 = mvL1C;
+
+			} else {
+				Derivation_process_for_median_luma_motion_vector_prediction(X);
+			}
+
+		}
 		
+
 	}
 	// 8.4.1.3.2
 	public void Derivation_process_for_motion_data_of_neighbouring_partitions(){
@@ -1395,6 +1493,58 @@ public class Slice{
 		}
 	}
 	
+	public int Median(int a,int b,int c){
+		// int array[]
+		int ret=0;
+		if(a>=b && a<=c){
+			ret= a;
+		}else if(b>=a && b<=c){
+			ret= b;
+
+		}else if(c>=a&&c<=b){
+			ret= c;
+		}
+		return ret;
+	}
+	// 8.4..1.3.1
+	public void Derivation_process_for_median_luma_motion_vector_prediction(int X) {
+		if(X == 0) {
+			// step 1
+			if(!availableFlagMbPartB && !availableFlagMbPartC && availableFlagMbPartA) {
+				mvL0B = mvL0A;
+				mvL0C = mvL0A;
+				refIdxL0B = refIdxL0A;
+				refIdxL0C = refIdxL0A;
+			}
+			if(refIdxL0A == refIdxL0 &&refIdxL0B != refIdxL0&&refIdxL0C != refIdxL0 ){
+				mvpL0=mvL0A;
+			}else if(refIdxL0A != refIdxL0 &&refIdxL0B == refIdxL0&&refIdxL0C != refIdxL0 ){
+				mvpL0=mvL0B;
+			}else if(refIdxL0A != refIdxL0 &&refIdxL0B != refIdxL0&&refIdxL0C == refIdxL0 ){
+				mvpL0=mvL0C;
+			}else{
+				mvpL0[0]=Median(mvL0A[0],mvL0B[0],mvL0C[0]);
+				mvpL0[1]=Median(mvL0A[1],mvL0B[1],mvL0C[1]);
+			}
+		}else{
+			if(!availableFlagMbPartB && !availableFlagMbPartC && availableFlagMbPartA) {
+				mvL1B = mvL1A;
+				mvL1C = mvL1A;
+				refIdxL1B = refIdxL1A;
+				refIdxL1C = refIdxL1A;
+			}
+			if(refIdxL1A == refIdxL1 &&refIdxL1B != refIdxL1&&refIdxL1C != refIdxL1 ){
+				mvpL1=mvL1A;
+			}else if(refIdxL1A != refIdxL1 &&refIdxL1B == refIdxL1&&refIdxL1C != refIdxL1 ){
+				mvpL1=mvL1B;
+			}else if(refIdxL1A != refIdxL1 &&refIdxL1B != refIdxL1&&refIdxL1C == refIdxL1 ){
+				mvpL1=mvL1C;
+			}else{
+				mvpL1[0]=Median(mvL1A[0],mvL1B[0],mvL1C[0]);
+				mvpL1[1]=Median(mvL1A[1],mvL1B[1],mvL1C[1]);
+			}
+		}
+	}
 
 	// 8.3.1.1
 	public void Derivation_process_for_Intra4x4PredMode() {
