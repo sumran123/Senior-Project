@@ -16,6 +16,8 @@ public class nal
 	boolean avc_3d_extension_flag; //u1
 	byte rbsp_byte[];
 	int NumBytesInNALunit;
+	// Slice 
+	Slice [] SliceData=new Slice[1000];
 	public void parseNalUnit(){
 
 
@@ -66,10 +68,11 @@ public class nal
 		int nalOffsetTemp;
 		sps sps0 = new sps(mp4_0.spsData);
 		pps pps0=new pps(mp4_0.ppsData);
+		nal test = new nal();
+		int idx=0;
 		for(int i = 0; i < (mp4_0.sampleOffsets.length); i++) {
 			nalOffsetTemp = mp4_0.sampleOffsets[i];
 			while(nalOffsetTemp < (mp4_0.sampleOffsets[i] + mp4_0.sampleSizes[i])) {
-					nal test = new nal();
 					ReadFile nallenght = new ReadFile(nalOffsetTemp, test.NAL_Unit_length_size,test.fileName);
 					nallenght.readBytes();
 					test.length = nallenght.ToDECIMAL(); /// NAL  UNIT TLENTH YAHAN SA PATA LAG RAHI HAI
@@ -81,6 +84,8 @@ public class nal
 						int x=scan.nextInt();
 						if(x==1){
 							Slice s1=new Slice(test.rbsp_byte,sps0,pps0,test);
+							test.SliceData[idx]=s1;
+							idx++;
 						}
 
 					// }

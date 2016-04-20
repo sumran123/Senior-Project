@@ -182,7 +182,7 @@ public class Slice{
 	int LogWDL,W0L,W1L,O0L,O1L;
 	int [][] predPartL1L,predPartL0L;
 	int [][] refPicLXL;
-	int refPicL0L,refPicL1L;
+	int [][]refPicL0L,refPicL1L;
 
 	int []RefPicList0=new int[10000];
 	int []RefPicList1=new int[10000];
@@ -793,11 +793,14 @@ public class Slice{
 	public void Reference_picture_selection_process(int X){
 		if(X==0){
 			if(field_pic_flag){
-				refPicL0L=RefPicList0[refIdxL0];
+				// nal0.SliceData[RefPicList0[refIdxL0]].SL;
+				refPicL0L=nal0.SliceData[RefPicList0[refIdxL0]].SL;
 			}else if(!field_pic_flag){
 
 				if(sps0.frame_mbs_only_flag){
-					refPicL0L=RefPicList0[refIdxL0];
+					// refPicL0L=RefPicList0[refIdxL0];
+					refPicL0L=nal0.SliceData[RefPicList0[refIdxL0]].SL;
+
 
 				}else{
 					System.out.println("not frame mb do the implementation");
@@ -811,11 +814,14 @@ public class Slice{
 
 		}else if(X==1){
 			if(field_pic_flag){
-				refPicL1L=RefPicList1[refIdxL1];
+				// refPicL1L=RefPicList1[refIdxL1];
+				refPicL1L=nal0.SliceData[RefPicList1[refIdxL1]].SL;
+
 			}else if(!field_pic_flag){
 
 				if(sps0.frame_mbs_only_flag){
-					refPicL1L=RefPicList1[refIdxL1];
+					refPicL1L=nal0.SliceData[RefPicList1[refIdxL1]].SL;
+					// refPicL1L=RefPicList1[refIdxL1];
 
 				}else{
 					System.out.println("not frame mb do the implementation");
@@ -832,17 +838,194 @@ public class Slice{
 	// 8.4.2.2
 	public void Fractional_sample_interpolation_process(int X){
 		int xAL = 0;
-		int yAL = 0,
+		int yAL = 0;
 		int xIntL,yIntL,xFracL,yFracL;
 		if(X==0){
 			predPartL0L=new int[partWidth][partHeight];
 			for(int xL = 0; xL < partWidth; xL++) {
-				
+				for(int yL=0;yL<partHeight;yL++){
+				// step 1
+					xIntL = xAL + (mvL0[0] >> 2) +xL;
+					yIntL = yAL + (mvL0[1] >> 2) +yL;
+					xFracL = mvL0[0] & 3;
+					yFracL = mvL0[1] & 3;
+
+					// step 2
+					System.out.println("call 8.4.2.2.1");
+					predPartL0L[xL][yL]=Luma_sample_interpolation_process(xIntL,yIntL, xFracL, yFracL,X);
+
+					// step 3
+					// this is for chroma
+				}
 			}
 		}
 
 	}
-	public void 
+	// 8.4.2.2.1
+	public int Luma_sample_interpolation_process(int xIntL, int yIntL, int xFracL, int yFracL,int X) {
+		int refPicHeightEffectiveL=16;
+		if(MbaffFrameFlag==false || mb_field_decoding_flag == false){
+			refPicHeightEffectiveL = PicHeightInSamplesL;
+		} else if(MbaffFrameFlag && mb_field_decoding_flag ){
+			refPicHeightEffectiveL = PicHeightInSamplesL/2;
+		}
+		int A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U;
+		int[] xDZL={0,1,0,1,-2,-1,0,1,2,3,-2,-1,0,1,2,3,0,1,0,1};
+		int[] yDZL={-2,-2,-1,-1,0,0,0,0,0,0,1,1,1,1,1,1,2,2,3,3};
+		int xAL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[0]);
+		int yAL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[0]);
+		int xBL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[1]);
+		int yBL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[1]);
+		int xCL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[2]);
+		int yCL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[2]);
+		int xDL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[3]);
+		int yDL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[3]);
+		int xEL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[4]);
+		int yEL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[4]);
+		int xFL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[5]);
+		int yFL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[5]);
+		int xGL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[6]);
+		int yGL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[6]);
+		int xHL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[7]);
+		int yHL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[7]);
+		int xIL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[8]);
+		int yIL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[8]);
+		int xJL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[9]);
+		int yJL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[9]);
+		int xKL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[10]);
+		int yKL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[10]);
+		int xLL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[11]);
+		int yLL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[11]);
+		int xML=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[12]);
+		int yML=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[12]);
+		int xNL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[13]);
+		int yNL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[13]);
+		int xPL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[14]);
+		int yPL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[14]);
+		int xQL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[15]);
+		int yQL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[15]);
+		int xRL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[16]);
+		int yRL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[16]);
+		int xSL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[17]);
+		int ySL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[17]);
+		int xTL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[18]);
+		int yTL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[18]);
+		int xUL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[19]);
+		int yUL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[19]);
+		// int[][] = getLumaSampleData(int refPic)
+		if(X==0){
+			A=refPicL0L[xAL][yAL];
+			B=refPicL0L[xBL][yBL];
+			C=refPicL0L[xCL][yCL];
+			D=refPicL0L[xDL][yDL];
+			E=refPicL0L[xEL][yEL];
+			F=refPicL0L[xFL][yFL];
+			G=refPicL0L[xGL][yGL];
+			H=refPicL0L[xHL][yHL];
+			I=refPicL0L[xIL][yIL];
+			J=refPicL0L[xJL][yJL];
+			K=refPicL0L[xKL][yKL];
+			L=refPicL0L[xLL][yLL];
+			M=refPicL0L[xML][yML];
+			N=refPicL0L[xNL][yNL];
+			P=refPicL0L[xPL][yPL];
+			Q=refPicL0L[xQL][yQL];
+			R=refPicL0L[xRL][yRL];
+			S=refPicL0L[xSL][ySL];
+			T=refPicL0L[xTL][yTL];
+			U=refPicL0L[xUL][yUL];
+		}else{
+			A=refPicL1L[xAL][yAL];
+			B=refPicL1L[xBL][yBL];
+			C=refPicL1L[xCL][yCL];
+			D=refPicL1L[xDL][yDL];
+			E=refPicL1L[xEL][yEL];
+			F=refPicL1L[xFL][yFL];
+			G=refPicL1L[xGL][yGL];
+			H=refPicL1L[xHL][yHL];
+			I=refPicL1L[xIL][yIL];
+			J=refPicL1L[xJL][yJL];
+			K=refPicL1L[xKL][yKL];
+			L=refPicL1L[xLL][yLL];
+			M=refPicL1L[xML][yML];
+			N=refPicL1L[xNL][yNL];
+			P=refPicL1L[xPL][yPL];
+			Q=refPicL1L[xQL][yQL];
+			R=refPicL1L[xRL][yRL];
+			S=refPicL1L[xSL][ySL];
+			T=refPicL1L[xTL][yTL];
+			U=refPicL1L[xUL][yUL];
+		}
+		int b1 = (E - 5*F + 20 *G + 20 *H -5 *I +J);
+		int h1 = (A - 5* C +20 *G + 20 *M - 5 * R + T);
+
+		int b = clip1y((b1 + 16) >> 5);
+		int h = clip1y((h1 + 16) >> 5);
+		int cc=(E+K+1)>>2;
+		int dd=(F+L+1)>>2;
+		int ee=(I+P+1)>>2;
+		int ff=(J+Q+1)>>2;
+		int m1 = (B - 5* D +20 *H + 20 *N - 5 * S + U);
+
+		int j1 = cc - 5 * dd + 20 * h1 + 20 * m1 * ee +ff;
+		int j= clip1y((j1 + 512) >> 10);
+		int s1 = (K - 5*L + 20 *M + 20 *N -5 *P +Q);
+		int s = (clip1y(s1 + 16) >> 5);
+		int m = (clip1y(m1 + 16) >> 5);
+
+		int a=(G+b+1)>>1;
+		int c=(H+b+1)>>1;
+		int d=(G+h+1)>>1;
+		int n=(M+h+1)>>1;
+		int f=(b+j+1)>>1;
+		int i=(h+j+1)>>1;
+		int k=(j+m+1)>>1;
+		int q=(j+s+1)>>1;
+
+		int e=(b+h+1)>>1;
+		int g=(b+m+1)>>1;
+		int p=(h+s+1)>>1;
+		int r=(m+s+1)>>1;
+		if(xFracL==0&&yFracL==0){
+			return G;
+		}else if(xFracL==0&&yFracL==1){
+			return d;
+		}else if(xFracL==0&&yFracL==2){
+			return h;
+		}else if(xFracL==0&&yFracL==3){
+			return n;
+		}else if(xFracL==1&&yFracL==0){
+			return a;
+		
+		}else if(xFracL==1&&yFracL==1){
+			return e;
+		}else if(xFracL==1&&yFracL==2){
+			return i;
+		}else if(xFracL==1&&yFracL==3){
+			return p;
+		}else if(xFracL==2&&yFracL==0){
+			return b;
+		}else if(xFracL==2&&yFracL==1){
+			return f;
+		
+		}else if(xFracL==2&&yFracL==2){
+			return j;
+		}else if(xFracL==2&&yFracL==3){
+			return q;
+		}else if(xFracL==3&&yFracL==0){
+			return c;
+		}else if(xFracL==3&&yFracL==1){
+			return g;
+		}else if(xFracL==3&&yFracL==2){
+			return k;
+		
+		}else if(xFracL==3&&yFracL==3){
+			return r;
+		}
+		return -1;
+
+
+	}
 
 	// 8.4.3
 	public void	Derivation_process_for_prediction_weights(){
