@@ -142,6 +142,8 @@ public class Slice{
 	MacroBlock mbData;
 	int intraMxMPredModeA;
 	int intraMxMPredModeB;
+	int [][] pred4x4L;
+
 	String N;
 	// inter varibles 
 	int MvCnt,partWidth,partHeight,partWidthC,partHeightC,SubWidthC,SubHeightC;
@@ -411,7 +413,7 @@ public class Slice{
 						mb_type="P_Skip";
 						Inter_prediction_process();
 						MacroBlockData[CurrMbAddr]=mbData;
-						x=scan.nextInt();
+						// x=scan.nextInt();
 
 						// System.out.println("CurrMbAddr "+CurrMbAddr);
 
@@ -713,14 +715,7 @@ public class Slice{
 	// 8.4
 	public void Inter_prediction_process(){
 
-		System.out.println("Inter_prediction_process for mb_type "+mb_type);
-		if(mb_type.equals("P_Skip")){
-			// return;
-
-		}else{
-			System.out.println(mb_type+" Inter_prediction_process");
-			// return;
-		}
+		// System.out.println("Inter_prediction_process for mb_type "+mb_type);
 
 		// Standard starts here dealing with P_Skip onle
 		for(mbPartIdx=0;mbPartIdx<NumMbPart(mb_type);mbPartIdx++){
@@ -768,6 +763,8 @@ public class Slice{
 			mbData.PredFlagL1[mbPartIdx]=predFlagL1;
 
 			MacroBlockData[CurrMbAddr] = mbData;
+			System.out.println("motion vector "+mvL0[0]+" " +mvL0[1]+" "+mvL1[0]+" " +mvL1[1]);
+
 
 			// call 6.4.2.1
 			Inverse_macroblock_partition_scanning_process();
@@ -779,10 +776,13 @@ public class Slice{
 			Inverse_sub_macroblock_partition_scanning_process();
 			xS=x;
 			yS=y;
-			for(x=0;x<partWidth-1;x++){
-				for(y=0;y<partHeight-1;y++){
+			System.out.println();
+			for(x=0;x<partWidth;x++){
+				for(y=0;y<partHeight;y++){
 					predL[xP+xS+x][yP+yS+y]=predPartL[x][y];
+					System.out.print(predL[xP+xS+x][yP+yS+y]+" ");
 				}
+				System.out.println();
 			}
 		}
 	}
@@ -812,6 +812,12 @@ public class Slice{
 			Reference_picture_selection_process(0);
 			// call 8.4.2.2
 			Fractional_sample_interpolation_process(0);
+
+		}
+		if(predFlagL1==true){
+			Reference_picture_selection_process(1);
+			// call 8.4.2.2
+			Fractional_sample_interpolation_process(1);
 
 		}
 		// call 8.4.2.3
@@ -904,6 +910,16 @@ public class Slice{
 	public void Fractional_sample_interpolation_process(int X){
 		int xAL = 0;
 		int yAL = 0;
+		if(MbaffFrameFlag==false){
+			// System.out.println("flag is false");
+			xAL=InverseRasterScan(CurrMbAddr,16,16,PicWidthInSamplesL,0);
+			yAL=InverseRasterScan(CurrMbAddr,16,16,PicWidthInSamplesL,1);
+		}else if (MbaffFrameFlag==true){
+			xAL=InverseRasterScan(CurrMbAddr/2,16,32,PicWidthInSamplesL,0);
+			yAL=InverseRasterScan(CurrMbAddr/2,16,32,PicWidthInSamplesL,1);
+			// xp=x0;
+			// yp=y0+(CurrMbAddr%2)*16;
+		}
 		int xIntL,yIntL,xFracL,yFracL;
 		if(X==0){
 			predPartL0L=new int[partWidth][partHeight];
@@ -914,16 +930,36 @@ public class Slice{
 					yIntL = yAL + (mvL0[1] >> 2) +yL;
 					xFracL = mvL0[0] & 3;
 					yFracL = mvL0[1] & 3;
-
+					// System.out.println("8.4.2.2 valus "+xIntL+" "+yIntL+" "+xFracL+" "+yFracL+" .............. ");
 					// step 2
 					// System.out.println("call 8.4.2.2.1");
 					predPartL0L[xL][yL]=Luma_sample_interpolation_process(xIntL,yIntL, xFracL, yFracL,X);
-					System.out.print(" "+predPartL0L[xL][yL]+" ");
+					// System.out.print(" "+predPartL0L[xL][yL]+" ");
 
 					// step 3
 					// this is for chroma
 				}
 			}
+		}else{
+			predPartL1L=new int[partWidth][partHeight];
+			for(int xL = 0; xL < partWidth; xL++) {
+				for(int yL=0;yL<partHeight;yL++){
+				// step 1
+					xIntL = xAL + (mvL1[0] >> 2) +xL;
+					yIntL = yAL + (mvL1[1] >> 2) +yL;
+					xFracL = mvL1[0] & 3;
+					yFracL = mvL1[1] & 3;
+
+					// step 2
+					// System.out.println("call 8.4.2.2.1");
+					predPartL1L[xL][yL]=Luma_sample_interpolation_process(xIntL,yIntL, xFracL, yFracL,X);
+					// System.out.print(" "+predPartL0L[xL][yL]+" ");
+
+					// step 3
+					// this is for chroma
+				}
+			}
+
 		}
 
 	}
@@ -979,6 +1015,7 @@ public class Slice{
 		int xUL=clip3(0,PicWidthInSamplesL-1,xIntL+xDZL[19]);
 		int yUL=clip3(0,refPicHeightEffectiveL-1,yIntL+yDZL[19]);
 		// int[][] = getLumaSampleData(int refPic)
+		// System.out.print(xAL);
 		if(X==0){
 			A=refPicL0L[xAL][yAL];
 			B=refPicL0L[xBL][yBL];
@@ -1041,6 +1078,7 @@ public class Slice{
 
 		int a=(G+b+1)>>1;
 		int c=(H+b+1)>>1;
+		// System.out.println();
 		int d=(G+h+1)>>1;
 		int n=(M+h+1)>>1;
 		int f=(b+j+1)>>1;
@@ -1079,6 +1117,7 @@ public class Slice{
 		}else if(xFracL==2&&yFracL==3){
 			return q;
 		}else if(xFracL==3&&yFracL==0){
+			System.out.println(c+"cccc");
 			return c;
 		}else if(xFracL==3&&yFracL==1){
 			return g;
@@ -1209,8 +1248,8 @@ public class Slice{
 			subMbPartIdx=0;
 			currSubMbType ="na";
 			// call 8.4.1.3
-			System.out.println("implementation of 8.4.1.3  required");
-			// Derivation_process_for_luma_motion_vector_prediction();
+			// System.out.println("implementation of 8.4.1.3  required");
+			Derivation_process_for_luma_motion_vector_prediction(0);
 		}
 	}
 	// 8.4.1.3
@@ -1506,7 +1545,7 @@ public class Slice{
 		}
 		return ret;
 	}
-	// 8.4..1.3.1
+	// 8.4.1.3.1
 	public void Derivation_process_for_median_luma_motion_vector_prediction(int X) {
 		if(X == 0) {
 			// step 1
@@ -1546,6 +1585,359 @@ public class Slice{
 		}
 	}
 
+	// 8.3.1.2
+	public void Intra_4x4_sample_prediction(){
+		// 6.4.3
+		int []ret=Inverse_4x4_luma_block_scanning_process(luma4x4BlkIdx);
+		int xO,yO;
+		xO=ret[0];
+		yO=ret[1];
+		int [] p_xminus_yminus=new int[5];
+		int [] p_xplus_yminus=new int[8];
+		boolean[] p_xminus_yminus_available_flag=new boolean[5];
+		boolean[] p_xplus_yminus_available_flag=new boolean[8];
+		int xN,yN;
+		int x=-1;
+		int y=0;
+		// initialization of flag array
+		for(int i = 0; i < 8; i++) {
+			p_xplus_yminus_available_flag[i] = true;
+		}
+		for(int i = 0; i < 5; i++) {
+			p_xminus_yminus_available_flag[i] = true;
+		}
+		x=-1;
+		for(y=0;y<5;y++){
+			// Step 1
+			xN=xO+x;
+			yN=yO+ y-1;
+			// step 2
+			// 6.4.1.2
+			Derivation_process_for_neighbouring_locations(xN,yN); // mbAddrN and xW, yW are the outputs
+			// step 3
+			if(!availableFlagN) {
+				p_xminus_yminus_available_flag[y] = false;
+			} else if(MbPartPredMode(mbRow,0).indexOf("Intra") == -1 && pps0.constrained_intra_pred_flag){
+				p_xminus_yminus_available_flag[y] = false;
+			} else if(mb_type_table.equals("table7.12.txt") && pps0.constrained_intra_pred_flag) {
+				System.out.println("table7.12.txt required ");
+			 	p_xminus_yminus_available_flag[y] = false;
+
+			} else if(x > 3 && (luma4x4BlkIdx == 3 || luma4x4BlkIdx == 11)) {
+			 	p_xminus_yminus_available_flag[y] = false;
+			} else {
+				p_xminus_yminus_available_flag[y]=true;
+				// 6.4.1
+			 	int []xmym=inverse_macroblock_scanning_process(mbAddrA);
+			 	int xm=xmym[0];
+			 	int ym=xmym[1];
+			 	if(MbaffFrameFlag) {
+			 		p_xminus_yminus[y] = SL [ xm + xW][ym + 2 * yW ];
+			 		System.out.println("problem may be here in 8.3.1.2");
+			 	} else if(!MbaffFrameFlag) {
+			 		p_xminus_yminus[y] = SL[ xm + xW][ym + yW ]; 
+			 	}
+			}	
+		}
+		y=-1;
+		for(x=0;x<8;x++){
+			xN = xO + x;
+			yN = yO + y; 
+			// step 2
+			Derivation_process_for_neighbouring_locations(xN,yN); // mbAddrN and xW, yW are the outputs
+			// step 3
+			if(!availableFlagN) {
+				p_xplus_yminus_available_flag[y] = false;
+			} else if(MbPartPredMode(mbRow,0).indexOf("Intra") == -1 && pps0.constrained_intra_pred_flag){
+				p_xplus_yminus_available_flag[y] = false;
+			} else if(mb_type_table.equals("table7.12.txt") && pps0.constrained_intra_pred_flag) {
+			 	p_xplus_yminus_available_flag[y] = false;
+
+			} else if(x > 3 && (luma4x4BlkIdx == 3 || luma4x4BlkIdx == 11)) {
+			 	p_xplus_yminus_available_flag[y] = false;
+			} else {
+			 	p_xplus_yminus_available_flag[y] = true;
+			 	int []xmym=inverse_macroblock_scanning_process(mbAddrA);
+			 	int xm=xmym[0];
+			 	int ym=xmym[1];
+			 	if(MbaffFrameFlag) {
+			 		p_xplus_yminus[x] = SL[ xm + xW][ym + 2 * yW ];
+
+			 	} else if(!MbaffFrameFlag) {
+			 		p_xplus_yminus[x] = SL[ xm + xW][ym + yW ]; 
+			 	}
+			}	 
+		}
+		// 
+		if(!p_xplus_yminus_available_flag[4]&&!p_xplus_yminus_available_flag[5]&&
+			!p_xplus_yminus_available_flag[6]&&!p_xplus_yminus_available_flag[7]){
+			if(p_xplus_yminus_available_flag[0]&&p_xplus_yminus_available_flag[1]&&
+				p_xplus_yminus_available_flag[2]&&p_xplus_yminus_available_flag[3]){
+				for(int i=0;i<4;i++){
+					p_xplus_yminus_available_flag[i+4]=true;
+					p_xplus_yminus[i+4]=p_xplus_yminus[i];
+				}
+			}
+		}
+		// 8.3.1.2.1
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 0) {
+			if(p_xplus_yminus_available_flag[0] && p_xplus_yminus_available_flag[1] 
+				&& p_xplus_yminus_available_flag[2] && p_xplus_yminus_available_flag[3]) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						pred4x4L[i][j] = p_xplus_yminus[i];	
+					}
+				}
+			}
+		}
+		// 8.3.1.2.2
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 1) {
+			if(p_xminus_yminus_available_flag[1] && p_xminus_yminus_available_flag[2] &&
+			 p_xminus_yminus_available_flag[3] && p_xminus_yminus_available_flag[4]) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						pred4x4L[i][j] = p_xminus_yminus[i+1];	
+					}
+				}
+			}
+		}
+		// 8.3.1.2.3
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 2) {
+			if(p_xplus_yminus_available_flag[0] && p_xplus_yminus_available_flag[1] 
+				&& p_xplus_yminus_available_flag[2] && p_xplus_yminus_available_flag[3]) {
+				if(p_xminus_yminus_available_flag[1] && p_xminus_yminus_available_flag[2] 
+					&& p_xminus_yminus_available_flag[3] && p_xminus_yminus_available_flag[4]) {
+					for(int i = 0; i < 4; i++) {
+						for(int j = 0; j < 4; j++) {
+							pred4x4L[i][j] = ( p_xplus_yminus[0] + p_xplus_yminus[ 1] + p_xplus_yminus[ 2]
+							 + p_xplus_yminus[ 3] + p_xminus_yminus[1 ] + p_xminus_yminus[2 ] 
+							 + p_xminus_yminus[3 ] + p_xminus_yminus[4] + 4 ) >> 3;
+						}
+					}					
+				}
+
+			}else if(!p_xplus_yminus_available_flag[0] || !p_xplus_yminus_available_flag[1] || 
+				!p_xplus_yminus_available_flag[2] || !p_xplus_yminus_available_flag[3]) {
+				if(p_xminus_yminus_available_flag[1] && p_xminus_yminus_available_flag[2] && 
+					p_xminus_yminus_available_flag[3] && p_xminus_yminus_available_flag[4]) {
+					for(int i = 0; i < 4; i++) {
+						for(int j = 0; j < 4; j++) {
+							pred4x4L[i][j] = (p_xminus_yminus[ 1 ] + p_xminus_yminus[2 ] 
+								+ p_xminus_yminus[3 ] + p_xminus_yminus[4] + 2 ) >> 2;
+						}
+					}					
+				}
+			} else if(p_xplus_yminus_available_flag[0] && p_xplus_yminus_available_flag[1] 
+				&& p_xplus_yminus_available_flag[2] && p_xplus_yminus_available_flag[3]) {
+				if(!p_xminus_yminus_available_flag[1] || !p_xminus_yminus_available_flag[2] || 
+					!p_xminus_yminus_available_flag[3] || !p_xminus_yminus_available_flag[4]) {
+					for(int i = 0; i < 4; i++) {
+						for(int j = 0; j < 4; j++) {
+							pred4x4L[i][j] = ( p_xplus_yminus[ 0] + p_xplus_yminus[ 1] + p_xplus_yminus[ 2] + p_xplus_yminus[ 3] + 2 ) >> 2;
+						}
+					}					
+				}
+			}else{
+
+			// }else if(!p_xplus_yminus_available_flag[0] || !p_xplus_yminus_available_flag[1] && 
+			// 	!p_xplus_yminus_available_flag[2] && !p_xplus_yminus_available_flag[3]) {
+			// 	if(!p_xminus_yminus_available_flag[1] && !p_xminus_yminus_available_flag[2] && !p_xminus_yminus_available_flag[3] && !p_xminus_yminus_available_flag[4]) {
+					for(int i = 0; i < 4; i++) {
+						for(int j = 0; j < 4; j++) {
+							pred4x4L[i][j] = ( 1 << ( BitDepthY - 1 ) );
+						}
+					}					
+				}
+			}
+		// 8.3.1.2.4
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 3) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 8; i++) {
+				if(!p_xplus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+
+			}
+			if(temp_flag) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+							if(i == 3 && j == 3) {
+								pred4x4L[i][j] = ( p_xplus_yminus[6] + 3 * p_xplus_yminus[7] + 2 ) >> 2;
+
+							} else {
+								pred4x4L[i][j] = ( p_xplus_yminus[ i + j] + 2 * p_xplus_yminus[ i + j + 1] + p_xplus_yminus[ i + j + 2] + 2 ) >> 2;
+							}
+						}
+					}
+
+			}
+		}
+		// 8.3.1.2.5
+		if(Intra4x4PredMode[luma4x4BlkIdx] == 4) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 5; i++) {
+				if(!p_xminus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			for(int i = 0; i < 4; i++) {
+				if(!p_xplus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			if(temp_flag) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						if(i > j) {
+							pred4x4L[ i][j ] = ( p_xplus_yminus[ i - j - 2] + 2 * p_xplus_yminus[ i - j - 1] + p_xplus_yminus[ i - j - 1 ] + 2 ) >> 2;
+
+						} else if(i < j) {
+							pred4x4L[i][j] = ( p_xminus_yminus[ j - i - 2+1 ] + 2 * p_xminus_yminus[j - i - 1 +1] + p_xminus_yminus[ j - i +1] + 2 ) >> 2;
+						} else if (i == j) {
+							pred4x4L[i][j ] = ( p_xplus_yminus[0] + 2 * p_xminus_yminus[0] + p_xminus_yminus[1 ] + 2 ) >> 2;
+						}
+
+					}
+				}
+			}
+		}
+		// 8.3.1.2.6
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 5) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 5; i++) {
+				if(!p_xminus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			for(int i = 0; i < 4; i++) {
+				if(!p_xplus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			if(temp_flag) {
+				int zVR;
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						zVR = 2 * i -j;
+						if(zVR == 2 || zVR == 4 || zVR == 6||zVR == 0) {
+							pred4x4L[i][j] = ( p_xplus_yminus[ i - ( j >> 1 ) - 1] + p_xplus_yminus[ i - ( j >> 1 )] + 1 ) >> 1;
+						}else if(zVR == 1 || zVR == 3 || zVR == 5) {
+							pred4x4L[i][j] = ( p_xplus_yminus[ i - ( j >> 1 ) - 2] + 2 * p_xplus_yminus[ i - ( j >> 1 ) - 1] + p_xplus_yminus[ i - ( j >> 1 )] + 2 ) >> 2;
+
+						} else if(zVR == -1) {
+							pred4x4L[i][j] = ( p_xminus_yminus[1] + 2 * p_xminus_yminus[0] + p_xplus_yminus[0]+2)>>2;
+
+						}else if(zVR == -2 || zVR == -3) {
+							pred4x4L[i][j] = ( p_xminus_yminus[j - 1 +1] + 2 * p_xminus_yminus[j - 2+1] + p_xminus_yminus[ j - 3 +1] + 2 ) >> 2;
+
+
+						}
+					}
+				}
+			}
+		}
+		// 8.3.1.2.7
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 6) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 5; i++) {
+				if(!p_xminus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			for(int i = 0; i < 4; i++) {
+				if(!p_xplus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			if(temp_flag) {
+				int zHD;
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						zHD = 2*j-i;
+						if(zHD == 2 || zHD == 4 || zHD == 6||zHD==0) {
+							pred4x4L[i][j] = ( p_xminus_yminus[ j - ( i >> 1 ) - 1+1] + p_xminus_yminus[ j - ( i >> 1 ) + 1+1 ]) >> 1;
+						}else if(zHD == 1 || zHD == 3 || zHD == 5) {
+							pred4x4L[i][j] = ( p_xminus_yminus[  j - ( i >> 1 ) - 2+1] + 2 * p_xminus_yminus[  j - ( i >> 1 ) - 1+1] + p_xminus_yminus[  j - ( i >> 1 ) + 2+1] + 2 ) >> 2;
+
+						} else if(zHD == -1) {
+							pred4x4L[i] [j] = ( p_xminus_yminus[0+1] + 2 * p_xminus_yminus[-1 +1 ] + p_xplus_yminus[ 0] + 2 ) >> 2;
+
+						}else if(zHD == -2 || zHD == -3) {
+							pred4x4L[i][j] = ( p_xplus_yminus[j - 1 ] + 2 * p_xplus_yminus[j - 2] + p_xplus_yminus[ j - 3 ] + 2 ) >> 2;
+
+						}
+					}
+				}
+			}
+		}
+		// 8.3.1.2.8
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 7) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 8; i++) {
+				if(!p_xplus_yminus_available_flag[i]) {
+					temp_flag = false;
+					break;
+				}
+
+			}
+			if(temp_flag) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						if(j == 2 || j == 0) {
+							pred4x4L[i][j ] = ( p_xplus_yminus[ i + ( j >> 1 )] + p_xplus_yminus[ i + ( j >> 1 ) + 1] + 1) >> 1;
+
+						} else if(j == 1 || j == 3) {
+							pred4x4L[i] [j] = ( p_xplus_yminus[ i + ( j >> 1 )] + 2 * p_xplus_yminus[ i + ( j >> 1 ) + 1] + p_xplus_yminus[ i + ( j >> 1 ) + 2] + 2 ) >> 2;
+
+						}
+					}
+				}
+
+
+			}
+		}
+		// 8.3.1.2.9
+
+		if(Intra4x4PredMode[ luma4x4BlkIdx ] == 8) {
+			boolean temp_flag = true;
+			for(int i = 0; i < 3; i++) {
+				if(!p_xminus_yminus_available_flag[i+1]) {
+					temp_flag = false;
+					break;
+				}
+			}
+			int zHU;
+			if(temp_flag) {
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						zHU = i + 2* j;
+						if(zHU == 0 || zHU == 2 || zHU == 4) {
+							pred4x4L[i][j] = ( p_xminus_yminus[j + ( i >> 1 ) + 1 ] + p_xminus_yminus[ j + ( i >> 1 ) + 1 + 1 ] + 1 ) >> 1;
+
+						}else if(zHU == 1 || zHU == 3 ) {
+							pred4x4L[i][j] = ( p_xminus_yminus[j + ( i >> 1 ) + 1] + 2 * p_xminus_yminus[j + ( i >> 1 ) + 1 + 1 ] + p_xminus_yminus[j + ( i >> 1 ) + 2 + 1 ] + 2 ) >> 2;
+
+						}else if(zHU == 5) {
+							pred4x4L[i] [j] = ( p_xminus_yminus[ 2 +1 ] + 3 * p_xminus_yminus[3 + 1 ] + 2 ) >> 2;
+
+						}else if(zHU > 5) {
+							pred4x4L[i] [j] = p_xminus_yminus[3 + 1];
+
+						}
+					}
+				}
+			}
+		}
+
+
+	}
 	// 8.3.1.1
 	public void Derivation_process_for_Intra4x4PredMode() {
 		Derivation_process_for_neighbouring_4x4_luma_blocks(); // 6.4.11.4
@@ -1597,6 +1989,7 @@ public class Slice{
 							intraMxMPredModeA = Intra4x4PredMode[luma4x4BlkIdxA]; 
 						}else if(MbPartPredMode(mbRow,0).indexOf("Intra_8x8") != -1){
 							//  set the value
+							System.out.println("came in 8.3.1.1 require implemetation");
 						}
 					}
 				}else{
@@ -1605,6 +1998,7 @@ public class Slice{
 							intraMxMPredModeA = MacroBlockData[mbAddrA].Intra4x4PredMode_Prev[luma4x4BlkIdxA];
 						}else if(MacroBlockData[mbAddrA].mbPredMode.indexOf("Intra_8x8") != -1){
 							//  set the value
+							System.out.println("came in 8.3.1.1 require implemetation");
 						}
 					}
 				}
@@ -1658,54 +2052,46 @@ public class Slice{
 			} 
 		}
 	}
-	// 8.3.1.2
-	public void Intra_4x4_sample_prediction(){
 
-		int []ret=Inverse_4x4_luma_block_scanning_process(luma4x4BlkIdx);
-		int xO,yO;
-		xO=ret[0];
-		yO=ret[1];
-		int [] p_xminus_yminus=new int[5];
-		int [] p_xplus_yminus=new int[8];
-		boolean[] p_xminus_yminus_available_flag=new boolean[5];
-		boolean[] p_xplus_yminus_available_flag=new boolean[8];
-		int xN,yN;
-		int x=-1;
-		int y=0;
-		for(y=0;y<5;y++){
-			// Step 1
-			xN=xO+x;
-			yN=yO+y;
-			// step 2
-			Derivation_process_for_neighbouring_locations(xN,yN);
-			// step 3
 
-			
-		}
-
-		y=-1;
-		for(x=0;x<8;x++){
-
-		}
-	}
 	// 8.3.1
 	public void Intra_4x4_prediction_process_for_luma_samples() {
 		// call 8.3.1.1
+		predL=new int[16][16];
 		for (luma4x4BlkIdx=0;luma4x4BlkIdx<16;luma4x4BlkIdx++){
 			Derivation_process_for_Intra4x4PredMode();
 		}
 		for (luma4x4BlkIdx=0;luma4x4BlkIdx<16;luma4x4BlkIdx++){
 			// 8.3.1.2
+			// step 1
+			Intra_4x4_sample_prediction();
+			// step 2
 
+			int [] ret = Inverse_4x4_luma_block_scanning_process(luma4x4BlkIdx);
+			int xO=ret[0];
+			int yO=ret[1];
+
+			// strep 3
+			for(int x = 0; x < 4; x ++) {
+				for(int y = 0; y < 4; y ++) {
+					predL[xO+x][yO+y]=pred4x4L[x][y];				
+				}
+			}
 		}
 		// for()
 	}
+	// 8.5.1
 	public void transform_decoding_process_for_4x4_luma_residual_blocks(){
+		// Intra_4x4_sample_prediction();
+		Intra_4x4_prediction_process_for_luma_samples();
 		if(!transform_size_8x8_flag){
-			for(int luma4x4BlkIdx=0;luma4x4BlkIdx<16;luma4x4BlkIdx++){
+			for(luma4x4BlkIdx=0;luma4x4BlkIdx<16;luma4x4BlkIdx++){
 				// System.out.println("********* "+luma4x4BlkIdx+1+ " *************");
 				int [][]c=new int[4][4];
+				// 8.5.6
+				
 				c=Inverse_zigzag_process(LumaLevel4x4[luma4x4BlkIdx]);
+				// 8.5.12
 				int [][]r=Scaling_and_transformation_process(c);
 				// for(int i=0;i<4;i++){
 					// System.out.println();
@@ -1725,12 +2111,29 @@ public class Slice{
 				// System.out.println();
 				
 				// step 3
-				if(TransformBypassModeFlag&&MbPartPredMode(mbRow,0).equals("Intra_4x4")){
+				if(TransformBypassModeFlag && MbPartPredMode(mbRow,0).equals("Intra_4x4") 
+					&&(Intra4x4PredMode[luma4x4BlkIdx]==0||Intra4x4PredMode[luma4x4BlkIdx]==1)){
 					// &&(Intra4x4PredMode[luma4x4BlkIdx]==0||Intra4x4PredMode[luma4x4BlkIdx]==1)){
 					// invoke process 8.5.15
 					System.out.println("implemetation required for 8.5.15");
+				}
+				// step 4
+				int [] ret = Inverse_4x4_luma_block_scanning_process(luma4x4BlkIdx);
+				int xO = ret[0];
+				int yO = ret[1];
+
+
+				// step 5
+				int [][] u  = new int[4][4];
+				for(int i = 0; i < 4; i++) {
+					for(int j = 0; j < 4; j++) {
+						u[i][j] = clip1y(predL[xO+ j][yO + i] + r[i][j]);
+					}
 
 				}
+				// step 6 
+				Picture_construction_process_prior_to_deblocking_filter_process(u);
+
 
 			}
 		}
@@ -1918,30 +2321,31 @@ public class Slice{
 			mvd_l1=new int[NumMbPart(mbRow)][2][2]; //sev
 			for(int mbPartIdx=0;mbPartIdx<NumMbPart(mbRow);mbPartIdx++){
 				if((num_ref_idx_l0_active_minus1>0||mb_field_decoding_flag!=field_pic_flag)&&
-				MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L1")){
+				!MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L1")){
 					System.out.println("ref_idx_l0");
 					ref_idx_l0[mbPartIdx]=p.tev();	
 				}
 			}
 			for (int mbPartIdx=0;mbPartIdx<NumMbPart(mbRow) ;mbPartIdx++ ) {
 				if((num_ref_idx_l1_active_minus1>0||mb_field_decoding_flag!=field_pic_flag)&&
-					MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L0")){
+					!MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L0")){
 					System.out.println("ref_idx_l1");
 
 					ref_idx_l1[mbPartIdx]=p.tev();
 				}
 			}
 			for (int mbPartIdx=0;mbPartIdx<NumMbPart(mbRow) ;mbPartIdx++ ) {
-				if(MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L1")){
+				if(!MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L1")){
 					for(int compIdx=0;compIdx<2;compIdx++){
-						System.out.println("mvd_l0 "+mvd_l0[mbPartIdx][0][compIdx]);
 						mvd_l0[mbPartIdx][0][compIdx]=p.sev();
+						System.out.println("mvd_l0 "+mvd_l0[mbPartIdx][0][compIdx]);
+						
 					}
 				}
 			}
 
 			for (int mbPartIdx=0;mbPartIdx<NumMbPart(mbRow) ;mbPartIdx++ ) {
-				if(MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L0")){
+				if(!MbPartPredMode(mbRow,mbPartIdx).equals("Pred_L0")){
 					for(int compIdx=0;compIdx<2;compIdx++){
 						mvd_l1[mbPartIdx][0][compIdx]=p.sev();
 						System.out.println("mvd_l1 "+mvd_l1[mbPartIdx][0][compIdx]);
@@ -2435,6 +2839,7 @@ public class Slice{
 		}
 		return ret;
 	}
+
 	public int[][] matrixMul(int[][] a ,int[][] b){
 		int [][] c=new int[4][4];
 		for (int i = 0; i < 4; i++)
@@ -2468,7 +2873,7 @@ public class Slice{
 	}
 	// 8.5.14
 	public void Picture_construction_process_prior_to_deblocking_filter_process(int [][]u){
-		int nE,x0=0,y0=0,xp=0,yp=0;
+		int nE=0,x0=0,y0=0,xp=0,yp=0;
 		// SL=new int[16][16];
 			// System.out.println("qpy== "+QPY);
 		
@@ -2482,16 +2887,22 @@ public class Slice{
 			xp=x0;
 			yp=y0+(CurrMbAddr%2)*16;
 		}
+		if(u.length==16){
+			nE=16;
+			x0=0;
+			y0=0;
 
-		nE=16;
-		// x0=InverseRasterScan(luma4x4BlkIdx/4,8,8,16,0)+
-		// InverseRasterScan(luma4x4BlkIdx%4,4,4,8,0);
+		}else if(u.length==4){
+			nE=4;
 
-		// y0=InverseRasterScan(luma4x4BlkIdx/4,8,8,16,1)+
-		// InverseRasterScan(luma4x4BlkIdx%4,4,4,8,1);
-		// System.out.println("xp "+xp);
-		x0=0;
-		y0=0;
+			x0=InverseRasterScan(luma4x4BlkIdx/4,8,8,16,0)+
+			InverseRasterScan(luma4x4BlkIdx%4,4,4,8,0);
+
+			y0=InverseRasterScan(luma4x4BlkIdx/4,8,8,16,1)+
+			InverseRasterScan(luma4x4BlkIdx%4,4,4,8,1);
+			// System.out.println("xp "+xp);
+		}
+		
 		for(int i=0;i<nE;i++){
 			// System.out.println();
 			for(int j=0;j<nE;j++){
@@ -3174,7 +3585,7 @@ public class Slice{
 						// availableFlagA=false;
 					}else if(!MacroBlockData[mbAddrA].mb_type_.equals("I_PCM")&&MacroBlockData[mbAddrA].luma4x4blk[luma4x4BlkIdxA]==0){
 						nA=0;
-						System.out.println("nA "+nA+" luma4x4BlkIdxA "+luma4x4BlkIdxA);
+						// System.out.println("nA "+nA+" luma4x4BlkIdxA "+luma4x4BlkIdxA);
 					}else if(MacroBlockData[mbAddrA].mb_type_.equals("I_PCM")){
 						nA=16;
 					}
@@ -3182,7 +3593,7 @@ public class Slice{
 					{
 						nA=MacroBlockData[mbAddrA].luma4x4blk[luma4x4BlkIdxA];
 					}
-						System.out.println("nA "+nA+" luma4x4BlkIdxA "+luma4x4BlkIdxA);
+						// System.out.println("nA "+nA+" luma4x4BlkIdxA "+luma4x4BlkIdxA);
 				}
 			}
 			if(availableFlagB){
@@ -3226,7 +3637,7 @@ public class Slice{
 			}
 
 			p.nC=nC;
-			System.out.println("nC "+p.nC);
+			// System.out.println("nC "+p.nC);
 		}else if(mode==3){
 			Derivation_process_for_neighbouring_4x4_chroma_blocks();
 			Derivation_process_for_neighbouring_macroblock_addresses_and_their_availability();
@@ -3303,7 +3714,7 @@ public class Slice{
 				nC=0;
 			}
 			// nC=0;
-			System.out.println("mode 3  ==>  "+nC);
+			// System.out.println("mode 3  ==>  "+nC);
 
 		}
 		p.nC=nC;
@@ -3441,11 +3852,11 @@ public class Slice{
 
 	public void residual_luma(int[] i16x16DClevel,int[][] i16x16AClevel
 		,int[][] level4x4,int[][] level8x8,int startIdx,int endIdx){
-		System.out.println("residual_luma called ");
+		// System.out.println("residual_luma called ");
 		if(startIdx==0&&MbPartPredMode(mbRow,0).equals("Intra_16x16")){
 			luma4x4BlkIdx=0;
 			setnC(0);
-			System.out.println("i16x16DClevel");
+			// System.out.println("i16x16DClevel");
 			p.residual_block_cavlc(i16x16DClevel,0,15,16);
 		}
 		for(int i8x8=0;i8x8<4;i8x8++){
