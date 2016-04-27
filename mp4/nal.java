@@ -81,6 +81,7 @@ public class nal
 					// if(test.nal_unit_type==5){
 						System.out.println("Nal Unit Type "+test.nal_unit_type);
 						Scanner scan= new Scanner(System.in);
+						System.out.println("slice number "+idx);
 						int x=scan.nextInt();
 						if(x==1){
 							Slice s1=new Slice(test.rbsp_byte,sps0,pps0,test);

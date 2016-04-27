@@ -22,9 +22,10 @@ public class parser{
 		rbsp_trailing_bits();
 	}
 	public void rbsp_trailing_bits(){
-		for(int i = (bytestream.length-1)*8; i > 0; i--) {
-			int byte_offset = i/8; 
+		for(int i = ((bytestream.length)*8)-1; i >= 0; i--) {
+			int byte_offset = i/8;
 			int bit_offset = i%8;
+			// System.out.println(i+" "+byte_offset+" " +bit_offset);
 			byte valByte = bytestream[byte_offset];
 			int valInt = valByte>>(8-(bit_offset+1)) & 0x0001;
 			if(valInt==1){
@@ -38,7 +39,8 @@ public class parser{
 	}
 	public boolean more_rbsp_data(){
 		// System.out.println("more_rbsp_data "+trailingBitOffSet+" pointer "+pointer);
-		if(pointer==(bytestream.length-1)*8){
+		// rbsp_trailing_bits();
+		if(pointer==((bytestream.length)*8)-1){
 			return false;
 		}else if(pointer>=trailingBitOffSet){
 			return false;
@@ -46,6 +48,16 @@ public class parser{
 			return true;
 		}
 	}	
+	public void printBit(int n){
+		StringBuilder sb = new StringBuilder(n);
+		int ret_value = 0;
+		for (int i = 0; i < n; i++)
+		{
+			sb.append(ReadBit(pointer+i));
+		}
+		System.out.println("next bits "+n+" "+ sb.toString());
+
+	}
 	public boolean getBit(){
 		int byte_offset = pointer/8; 
 		int bit_offset = pointer%8;
@@ -131,12 +143,13 @@ public class parser{
 		}
 		return 0;
 	}
-	public int tev(){
-		int codeNum;
-		int x=ExpGolombDecode();
-		codeNum=x;
-		if(x>1){
+	public int tev(int x){
+		int codeNum=0;
+		if(x==0){
 			return x;
+		}
+		if(x>1){
+			return uev();
 		}else if(x==1){
 			codeNum=(readBits(1)==0) ? 1 : 0;
 		}
