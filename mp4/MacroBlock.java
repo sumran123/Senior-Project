@@ -1,7 +1,8 @@
 public class MacroBlock{
 	String mb_type_;
 	String mbPredMode;
-	
+	String mb_type_table_;
+	String MbPartPredMode_;
 	int [][][] MvL0=new int[4][16][2];
 	int[][][] MvL1=new int[4][16][2];
 	int [] RefIdxL0=new int[4];

@@ -506,10 +506,10 @@ public class parser{
 			}
 		}
 
-		System.out.println();
-		for (int i=0;i<maxNumCoeff ;i++ ) {
-			System.out.print(coeffLevel[i]+" ");
-		}
+	// 	System.out.println();
+	// 	for (int i=0;i<maxNumCoeff ;i++ ) {
+	// 		System.out.print(coeffLevel[i]+" ");
+	// 	}
 	}
 
 
