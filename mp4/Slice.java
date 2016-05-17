@@ -632,6 +632,7 @@ public class Slice{
 		// 	// System.out.println("mb pred mode "+MbPartPredMode(mbRow,0));
 		// 	// x=scan.nextInt();
 		// }
+		// System.out.println("*********************** "+ CurrMbAddr+" **************************");
 		if(MbPartPredMode(mbRow,0).equals("Intra_16x16")){
 			transform_decoding_process_for_luma_samples_of_Intra_16x16();
 		}else if(MbPartPredMode(mbRow,0).equals("Intra_4x4")){
@@ -1067,7 +1068,7 @@ public class Slice{
 				}
 			}
 		}
-			// if(mb_type.equals("P_8x8ref0")){
+			// if(mb_type.equals("P_L0_L0_8x16")&&picture_num>=12){
 			// 	int nextint=scan.nextInt();
 			// }
 	}
@@ -1391,7 +1392,7 @@ public class Slice{
 		int ff=(20*J+20*Q);
 		int m1 = (B - 5* D +20 *H + 20 *N - 5 * S + U);
 
-		int j1 = cc - 5 * dd + 20 * h1 + 20 * m1 * ee +ff;
+		int j1 = cc - 5 * dd + 20 * h1 + 20 * m1 -5* ee +ff;
 		int j= clip1y((j1 + 512) >> 10);
 		int s1 = (K - 5*L + 20 *M + 20 *N -5 *P +Q);
 		// System.out.println;
@@ -1413,9 +1414,9 @@ public class Slice{
 		int p=(h+s+1)>>1;
 		int r=(m+s+1)>>1;
 		// if(mb_type.equals("P_L0_L0_8x16")){
-			
+		// 	System.out.println();
 		// 	System.out.println(xFracL+" "+yFracL);
-		// 	// System.out.println();
+		// 	System.out.println();
 		// 	System.out.println("s "+s+" b"+b+" h "+h+" p "+p+" e "+e+" s1 "+s1);
 		// 	System.out.println();
 		// 	System.out.print(A+" "+B+" "+C+" "+D+" "+E+" "+F+" "+G+" "+H+" "+I+" "+J+" "+K+" "+L+" "+M+" "+N+" "+P+" "+Q+" "+R+" "+S+" "+T+" "+U);
@@ -3426,10 +3427,16 @@ public class Slice{
 			// System.out.println(luma4x4BlkIdx+" == "+xo+" " +yo);
 
 			for(int x=0;x<4;x++){
-				// System.out.println();
+				// if(mb_type.equals("P_L0_L0_8x16")&&picture_num>=12){
+
+				// 	System.out.println();
+				// }
 				for(int y=0;y<4;y++){
 					rMB[y+xo][x+yo]=r[x][y];
-					// System.out.print(r[x][y]+" ");
+					// if(mb_type.equals("P_L0_L0_8x16")&&picture_num>=12){
+
+					// 	System.out.print(r[x][y]+" ");
+					// }
 				}
 			}
 			// System.out.println();
@@ -3455,6 +3462,9 @@ public class Slice{
 				}
 			}
 		}
+		// if(mb_type.equals("P_L0_L0_8x16")&&picture_num>=12){
+		// 		int nextint=scan.nextInt();
+		// }
 		// 5
 		Picture_construction_process_prior_to_deblocking_filter_process(u);
 	}
